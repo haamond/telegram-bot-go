@@ -24,10 +24,6 @@ A learning project to build a Telegram bot using Go, following best practices.
 ## Setup
 
 1. Clone the repository:
-  ```bash
-  git clone https://github.com/haamond/telegram-bot-go.git
-  cd telegram-bot-go
-
 2. Install dependencies:  
 3. Create a .env file with your bot token:  
 4. Run the bot:  
