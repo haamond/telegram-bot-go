@@ -30,6 +30,7 @@ A learning project to build a Telegram bot using Go, following best practices.
 5. Find your bot on Telegram and send /start to begin!  
 
 ## Project Structure
+```bash
 telegram-bot-go/
 ├── config/          # Configuration management
 ├── internal/bot/    # Bot implementation
@@ -39,7 +40,7 @@ telegram-bot-go/
 ├── .env            # Environment variables (not committed)
 ├── main.go         # Application entry point with polling loop
 └── go.mod          # Go module definition
-
+```
 
 
 
