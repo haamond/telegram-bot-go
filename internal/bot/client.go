@@ -6,11 +6,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"hamond.dev/telegram-bot-go/internal/youtube"
 )
 
+// Client represents the bot client
 type Client struct {
 	token   string
 	baseURL string
+	youtube *youtube.Client
 }
 
 // NewClient creates a new bot client
@@ -18,6 +22,7 @@ func NewClient(token string) *Client {
 	return &Client{
 		token:   token,
 		baseURL: "https://api.telegram.org/bot" + token,
+		youtube: youtube.NewClient(),
 	}
 }
 
@@ -117,13 +122,13 @@ func (c *Client) SetWebhook(webhookURL string) error {
 		URL: webhookURL,
 	}
 
-	requestJsonBody, err := json.Marshal(requestBody)
+	jsonData, err := json.Marshal(requestBody)
 	if err != nil {
 		return fmt.Errorf("failed to marshal webhook request: %w", err)
 	}
 
 	url := c.baseURL + "/setWebhook"
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(requestJsonBody))
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("failed to set webhook: %w", err)
 	}
