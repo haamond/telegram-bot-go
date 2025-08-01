@@ -75,6 +75,24 @@ func (c *Client) handleDownloadCommand(chatID int64, url string) error {
 
 	fmt.Printf("Video info: Title=%s, Duration=%d seconds\n", videoInfo.Title, videoInfo.Duration)
 
-	return c.SendMessage(chatID, fmt.Sprintf("📹 *%s*\n\nDuration: %d seconds\n\nDownloading in 360p (format 18)...",
+	// Send download starting message
+	err = c.SendMessage(chatID, fmt.Sprintf("📹 *%s*\n\nDuration: %d seconds\n\n⬇️ Starting download (360p)...",
 		videoInfo.Title, videoInfo.Duration))
+	if err != nil {
+		return err
+	}
+
+	// Create a simple filename
+	filename := fmt.Sprintf("%s.%%(ext)s", videoInfo.ID) // yt-dlp will replace %%(ext)s with actual extension
+
+	// Download the video
+	fmt.Printf("Starting download: %s\n", videoInfo.Title)
+	err = c.youtube.DownloadFormat18(url, filename)
+	if err != nil {
+		fmt.Printf("Download failed %v\n", err)
+		return c.SendMessage(chatID, "❌ Download failed. Please try again later.")
+	}
+
+	fmt.Printf("Download completed: %s\n", videoInfo.Title)
+	return c.SendMessage(chatID, "✅ Download completed! Video saved successfully.")
 }
