@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"hamond.dev/telegram-bot-go/internal/youtube"
 )
@@ -189,4 +192,59 @@ func (c *Client) GetWebhookInfo() (*WebhookInfo, error) {
 	}
 
 	return &response.Result, nil
+}
+
+// SendVideo sends a video file to a chat
+func (c *Client) SendVideo(chatID int64, videoPath string) error {
+	// For now, we'll use a simple approach with sendDocument
+	// Later we can improve this to use sendVideo for better presentation
+
+	// Read the file
+	file, err := os.Open(videoPath)
+	if err != nil {
+		return fmt.Errorf("failed to open video file: %w", err)
+	}
+	defer file.Close()
+
+	// Create multipart form data
+	var requestBody bytes.Buffer
+	writer := multipart.NewWriter(&requestBody)
+
+	// Add chat_id field
+	err = writer.WriteField("chat_id", fmt.Sprintf("%d", chatID))
+	if err != nil {
+		return fmt.Errorf("failed to create form file: %w", err)
+	}
+
+	// Add document field with file
+	part, err := writer.CreateFormFile("document", filepath.Base(videoPath))
+	if err != nil {
+		return fmt.Errorf("failed to create form file: %w", err)
+	}
+
+	_, err = io.Copy(part, file)
+	if err != nil {
+		return fmt.Errorf("failed to copy file data: %w", err)
+	}
+
+	err = writer.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close writer: %w", err)
+	}
+
+	// Send the request
+	url := c.baseURL + "/sendDocument"
+	resp, err := http.Post(url, writer.FormDataContentType(), &requestBody)
+	if err != nil {
+		return fmt.Errorf("failed to send video: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to send video, status: %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
 }

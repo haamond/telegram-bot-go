@@ -2,6 +2,7 @@ package bot
 
 import (
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -93,6 +94,29 @@ func (c *Client) handleDownloadCommand(chatID int64, url string) error {
 		return c.SendMessage(chatID, "❌ Download failed. Please try again later.")
 	}
 
-	fmt.Printf("Download completed: %s\n", videoInfo.Title)
-	return c.SendMessage(chatID, "✅ Download completed! Video saved successfully.")
+	// Find the actual downloaded file (yt-dlp replaces %%(ext)s with actual extension)
+	downloadedFile := fmt.Sprintf("%s.mp4", videoInfo.ID) // Format 18 is always mp4
+	fmt.Printf("Download completed: %s -> %s\n", videoInfo.Title, downloadedFile)
+
+	// Send upload message
+	err = c.SendMessage(chatID, "📤 Uploading video to Telegram...")
+	if err != nil {
+		return err
+	}
+
+	// Send the video file back to user
+	fmt.Printf("Uploading file to Telegram: %s\n", downloadedFile)
+	err = c.SendVideo(chatID, downloadedFile)
+	if err != nil {
+		fmt.Printf("Upload failed: %v\n", err)
+		return c.SendMessage(chatID, "❌ Failed to upload video. File downloaded locally.")
+	}
+
+	// Clean up downloaded file
+	fmt.Printf("Cleaning up file: %s\n", downloadedFile)
+	os.Remove(downloadedFile)
+
+	fmt.Printf("Process completed successfully for : %s\n", videoInfo.Title)
+	return c.SendMessage(chatID, "✅ Video sent successfully!")
+
 }
