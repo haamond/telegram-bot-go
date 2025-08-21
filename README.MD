@@ -1,46 +1,25 @@
-# Telegram Bot in Go
+# YouTube Downloader Telegram Bot
 
-A learning project to build a Telegram bot using Go, following best practices.
+A simple and efficient Telegram bot built with Go that downloads YouTube videos. Just send a YouTube link and get the video back!
 
-## Features
+## ✨ Features
 
-- [x] Environment configuration with .env support
-- [x] Bot client with API communication
-- [x] GetMe API endpoint implementation
-- [x] Message handling with polling
-- [x] Command processing (/start, /help, /echo)
-- [x] Echo functionality for regular messages
-- [ ] Webhook support (coming next)
-- [ ] Advanced command features
-- [ ] Database integration
+- **Instant Download**: Just paste a YouTube link - no commands needed!
+- **Smart Recognition**: Automatically detects YouTube URLs in messages
+- **360p Quality**: Optimized for quick downloads and Telegram's file size limits
+- **User-Friendly**: Simple interface with helpful messages
+- **Multiple Modes**: Supports both polling and webhook modes
+- **Clean Architecture**: Well-structured Go code following best practices
 
-## Current Commands
+## 🚀 Quick Start
 
-- `/start` - Welcome message with bot introduction
-- `/help` - Display available commands
-- `/echo <text>` - Echo back the provided text
-- Any regular message will be echoed back
+### Prerequisites
 
-## Setup
+- Go 1.24+ installed
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) installed (`pip install yt-dlp` or `brew install yt-dlp`)
+- A Telegram Bot Token from [@BotFather](https://t.me/botfather)
 
-1. Clone the repository:
-2. Install dependencies:  
-3. Create a .env file with your bot token:  
-4. Run the bot:  
-5. Find your bot on Telegram and send /start to begin!  
+### Installation
 
-## Project Structure
+1. **Clone the repository:**
 ```bash
-telegram-bot-go/
-├── config/          # Configuration management
-├── internal/bot/    # Bot implementation
-│   ├── client.go    # HTTP client and API methods
-│   ├── handler.go   # Message and command handling
-│   └── types.go     # Telegram API type definitions
-├── .env            # Environment variables (not committed)
-├── main.go         # Application entry point with polling loop
-└── go.mod          # Go module definition
-```
-
-
-
