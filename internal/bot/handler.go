@@ -17,8 +17,13 @@ func (c *Client) HandleMessage(message *Message) error {
 		return c.handleCommand(message)
 	}
 
-	// Echo back regular messages
-	return c.SendMessage(message.Chat.ID, "You said: "+message.Text)
+	// Check if the message contains a YouTube URL
+	if c.youtube.IsValidURL(message.Text) {
+		return c.handleDownloadCommand(message.Chat.ID, strings.TrimSpace(message.Text))
+	}
+
+	// For non-YouTube URLs, provide help
+	return c.SendMessage(message.Chat.ID, "👋 Send me a YouTube link and I'll download the video for you!\n\nExample: https://youtube.com/watch?v=...\n\nOr use /help to see available commands.")
 }
 
 // handleCommand processes bot commands
@@ -27,19 +32,12 @@ func (c *Client) handleCommand(message *Message) error {
 
 	switch {
 	case strings.HasPrefix(command, "/start"):
-		welcomeText := fmt.Sprintf("Hello %s! 👋\n\nI'm your Go YouTube downloader bot. Try these commands:\n/help - Show available commands\n/download <youtube_url> - Download video in 360p", message.From.FirstName)
+		welcomeText := fmt.Sprintf("Hello %s! 👋\n\nI'm your YouTube downloader bot. Just send me a YouTube link and I'll download the video for you!\n\n📹 Supported formats:\n• YouTube URLs (youtube.com/watch?v=...)\n• YouTube short URLs (youtu.be/...)\n\nThe video will be downloaded in 360p quality for optimal file size and compatibility.\n\nType /help for more info.", message.From.FirstName)
 		return c.SendMessage(message.Chat.ID, welcomeText)
 
 	case strings.HasPrefix(command, "/help"):
-		helpText := "Available commands:\n/start - Welcome message\n/help - This help message\n/echo <text> - Echo your message\n/download <youtube_url> - Download video in 360p\n\nOr just send me any message and I'll echo it back!"
+		helpText := "📖 *How to use this bot:*\n\n1️⃣ Send me any YouTube link\n2️⃣ I'll download the video (360p)\n3️⃣ The video will be sent back to you\n\n*Commands:*\n/start - Welcome message\n/help - This help message\n/download <url> - Explicitly download a video\n\n*Examples:*\n• https://youtube.com/watch?v=dQw4w9WgXcQ\n• https://youtu.be/dQw4w9WgXcQ\n\n⚡ Just paste the link and I'll handle the rest!"
 		return c.SendMessage(message.Chat.ID, helpText)
-
-	case strings.HasPrefix(command, "/echo "):
-		echoText := strings.TrimPrefix(message.Text, "/echo ")
-		if echoText == "" {
-			return c.SendMessage(message.Chat.ID, "Please provide text to echo. Example: /echo Hello World")
-		}
-		return c.SendMessage(message.Chat.ID, "Echo: "+echoText)
 
 	case strings.HasPrefix(command, "/download "):
 		url := strings.TrimPrefix(message.Text, "/download ")
@@ -50,19 +48,22 @@ func (c *Client) handleCommand(message *Message) error {
 		return c.handleDownloadCommand(message.Chat.ID, url)
 
 	default:
-		return c.SendMessage(message.Chat.ID, "Unknown command. Type /help to see available commands.")
+		return c.SendMessage(message.Chat.ID, "❓ Unknown command. Type /help to see available commands.")
 	}
 }
 
-// handleDownloadCommand handles the /download command (simplified to format 18)
+// handleDownloadCommand handles video download requests
 func (c *Client) handleDownloadCommand(chatID int64, url string) error {
+	// Clean the URL (remove any extra spaces or characters)
+	url = strings.TrimSpace(url)
+
 	// Validate URL
 	if !c.youtube.IsValidURL(url) {
 		return c.SendMessage(chatID, "❌ Invalid YouTube URL. Please provide a valid YouTube or youtu.be link.")
 	}
 
 	// Send "processing" message
-	err := c.SendMessage(chatID, "🔍 Getting video information...")
+	err := c.SendMessage(chatID, "🔍 Fetching video information...")
 	if err != nil {
 		return err
 	}
@@ -76,9 +77,12 @@ func (c *Client) handleDownloadCommand(chatID int64, url string) error {
 
 	fmt.Printf("Video info: Title=%s, Duration=%d seconds\n", videoInfo.Title, videoInfo.Duration)
 
-	// Send download starting message
-	err = c.SendMessage(chatID, fmt.Sprintf("📹 *%s*\n\nDuration: %d seconds\n\n⬇️ Starting download (360p)...",
-		videoInfo.Title, videoInfo.Duration))
+	// Format duration nicely
+	duration := formatDuration(videoInfo.Duration)
+
+	// Send download starting message with more info
+	err = c.SendMessage(chatID, fmt.Sprintf("📹 *%s*\n\n⏱ Duration: %s\n📊 Quality: 360p\n\n⬇️ Downloading video...",
+		videoInfo.Title, duration))
 	if err != nil {
 		return err
 	}
@@ -91,15 +95,22 @@ func (c *Client) handleDownloadCommand(chatID int64, url string) error {
 	err = c.youtube.DownloadFormat18(url, filename)
 	if err != nil {
 		fmt.Printf("Download failed %v\n", err)
-		return c.SendMessage(chatID, "❌ Download failed. Please try again later.")
+		return c.SendMessage(chatID, "❌ Download failed. This might be due to:\n• Video is private or age-restricted\n• Video is too long\n• Regional restrictions\n\nPlease try another video.")
 	}
 
 	// Find the actual downloaded file (yt-dlp replaces %%(ext)s with actual extension)
 	downloadedFile := fmt.Sprintf("%s.mp4", videoInfo.ID) // Format 18 is always mp4
 	fmt.Printf("Download completed: %s -> %s\n", videoInfo.Title, downloadedFile)
 
+	// Check file size before uploading (Telegram has a 50MB limit for bots)
+	fileInfo, err := os.Stat(downloadedFile)
+	if err == nil && fileInfo.Size() > 50*1024*1024 {
+		os.Remove(downloadedFile)
+		return c.SendMessage(chatID, "❌ Video is too large (>50MB). Telegram bots can only send files up to 50MB.\n\nTry a shorter video.")
+	}
+
 	// Send upload message
-	err = c.SendMessage(chatID, "📤 Uploading video to Telegram...")
+	err = c.SendMessage(chatID, "📤 Uploading to Telegram...")
 	if err != nil {
 		return err
 	}
@@ -109,14 +120,32 @@ func (c *Client) handleDownloadCommand(chatID int64, url string) error {
 	err = c.SendVideo(chatID, downloadedFile)
 	if err != nil {
 		fmt.Printf("Upload failed: %v\n", err)
-		return c.SendMessage(chatID, "❌ Failed to upload video. File downloaded locally.")
+		os.Remove(downloadedFile)
+		return c.SendMessage(chatID, "❌ Failed to upload video to Telegram. The file might be too large or in an unsupported format.")
 	}
 
 	// Clean up downloaded file
 	fmt.Printf("Cleaning up file: %s\n", downloadedFile)
 	os.Remove(downloadedFile)
 
-	fmt.Printf("Process completed successfully for : %s\n", videoInfo.Title)
-	return c.SendMessage(chatID, "✅ Video sent successfully!")
+	fmt.Printf("Process completed successfully for: %s\n", videoInfo.Title)
+	return c.SendMessage(chatID, "✅ Video sent successfully! Send another link to download more videos.")
+}
 
+// formatDuration converts seconds to a human-readable format
+func formatDuration(seconds int) string {
+	if seconds < 60 {
+		return fmt.Sprintf("%d seconds", seconds)
+	}
+	minutes := seconds / 60
+	secs := seconds % 60
+	if minutes < 60 {
+		if secs == 0 {
+			return fmt.Sprintf("%d minutes", minutes)
+		}
+		return fmt.Sprintf("%d min %d sec", minutes, secs)
+	}
+	hours := minutes / 60
+	mins := minutes % 60
+	return fmt.Sprintf("%d hr %d min", hours, mins)
 }
