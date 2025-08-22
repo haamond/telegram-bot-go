@@ -23,8 +23,8 @@ A simple and efficient Telegram bot built with Go that downloads YouTube videos.
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/yourusername/telegram-bot-go.git
-cd telegram-bot-go
+git clone https://github.com/yourusername/telegram-yt-bot.git
+cd telegram-yt-bot
 ```
 
 2. **Install dependencies:**
@@ -88,7 +88,7 @@ PORT=8080
 ## 🏗️ Project Structure
 
 ```
-telegram-bot-go/
+telegram-yt-bot/
 ├── main.go              # Application entry point
 ├── config/              # Configuration management
 │   ├── config.go        # Config struct and loader
@@ -121,8 +121,8 @@ go test -cover ./...
 
 ### Docker (Coming Soon)
 ```bash
-docker build -t telegram-bot-go .
-docker run -e TELEGRAM_BOT_TOKEN=your_token telegram-bot-go
+docker build -t telegram-yt-bot .
+docker run -e TELEGRAM_BOT_TOKEN=your_token telegram-yt-bot
 ```
 
 ### Heroku
@@ -146,7 +146,7 @@ docker run -e TELEGRAM_BOT_TOKEN=your_token telegram-bot-go
 ```bash
 # Clone and setup
 git clone <repository>
-cd telegram-bot-go
+cd telegram-yt-bot
 go mod download
 
 # Create .env file with your test bot token
@@ -201,6 +201,6 @@ This bot is for educational purposes. Please respect YouTube's Terms of Service 
 
 ### Getting Help
 
-- Check the [Issues](https://github.com/yourusername/telegram-bot-go/issues) page
+- Check the [Issues](https://github.com/yourusername/telegram-yt-bot/issues) page
 - Create a new issue with detailed information
 - Include logs and error messages when reporting bugs
